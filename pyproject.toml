@@ -77,7 +77,7 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 include = ["lace","lace.*"]
-namespaces = false
+namespaces = true
 
 [tool.setuptools_scm]
 
