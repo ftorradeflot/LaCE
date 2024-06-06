@@ -3,6 +3,7 @@ import copy
 import sys
 import os
 import json
+from pathlib import Path
 
 import lace
 from lace.setup_simulations import read_genic, read_gadget
@@ -127,7 +128,7 @@ class GadgetArchive(BaseArchive):
 
         if postproc == "Pedersen21":
             # directory of the post-processing within LaCE
-            self.basedir = "/data/sim_suites/Australia20/"
+            self.basedir = "data/sim_suites/Australia20/"
             # number of simulation phases (fix-and-paired IC)
             self.n_phases = 2
             # number of simulation axes in the post-processing
@@ -139,7 +140,7 @@ class GadgetArchive(BaseArchive):
             # Cabayol23, as it reads these parameters from the Pedersen21 post-processing.
             # It was implemented this way because the code used to compute these values,
             # fake_spectra, changed between Pedersen21 and Cabayol23
-            self.basedir_params = "/data/sim_suites/Australia20/"
+            self.basedir_params = "data/sim_suites/Australia20/"
             self.p1d_label_params = self.p1d_label
             self.sk_label_params = "Ns500_wM0.05"
             # if files include P3D measurements
@@ -157,12 +158,12 @@ class GadgetArchive(BaseArchive):
             self.testing_z_min = 0
             self.testing_z_max = 10
         elif postproc == "Cabayol23":
-            self.basedir = "/data/sim_suites/post_768/"
+            self.basedir = "data/sim_suites/post_768/"
             self.n_phases = 2
             self.n_axes = 3
             self.p1d_label = "p1d_stau"
             self.sk_label = "Ns768_wM0.05"
-            self.basedir_params = "/data/sim_suites/Australia20/"
+            self.basedir_params = "data/sim_suites/Australia20/"
             self.p1d_label_params = "p1d"
             self.sk_label_params = "Ns500_wM0.05"
             self.also_P3D = True
@@ -176,12 +177,12 @@ class GadgetArchive(BaseArchive):
             self.testing_z_min = 0
             self.testing_z_max = 10
         elif postproc == "768_768":
-            self.basedir = "/data/sim_suites/post_768/"
+            self.basedir = "data/sim_suites/post_768/"
             self.n_phases = 2
             self.n_axes = 3
             self.p1d_label = "p1d_stau"
             self.sk_label = "Ns768_wM0.05"
-            self.basedir_params = "/data/sim_suites/post_768/"
+            self.basedir_params = "data/sim_suites/post_768/"
             self.p1d_label_params = self.p1d_label
             self.sk_label_params = "Ns768_wM0.05"
             self.also_P3D = True
@@ -196,10 +197,10 @@ class GadgetArchive(BaseArchive):
             self.testing_z_max = 10
 
         ## get path of the repo
-        repo = os.path.dirname(lace.__path__[0]) + "/"
+        repo = Path(lace.__path__[0])
 
-        self.fulldir = repo + self.basedir
-        self.fulldir_param = repo + self.basedir_params
+        self.fulldir = repo / self.basedir
+        self.fulldir_param = repo / self.basedir_params
 
         self.key_conv = {
             "mF": "mF",
@@ -308,7 +309,7 @@ class GadgetArchive(BaseArchive):
             # open file with precomputed values to check kp_Mpc
             try:
                 file_cosmo = np.load(
-                    self.fulldir + "mpg_emu_cosmo.npy", allow_pickle=True
+                    self.fulldir / "mpg_emu_cosmo.npy", allow_pickle=True
                 )
             except:
                 raise IOError("The file " + file_cosmo + " does not exist")
@@ -334,15 +335,15 @@ class GadgetArchive(BaseArchive):
             from lace.cosmo import camb_cosmo, fit_linP
 
             _, sim_name_param, tag_param = self._sim2file_name(sim_label)
-            pair_dir = self.fulldir_param + "/" + sim_name_param
+            pair_dir = self.fulldir_param  / sim_name_param
 
             # read gadget file
-            gadget_fname = pair_dir + "/sim_plus/paramfile.gadget"
+            gadget_fname = str(pair_dir / "sim_plus/paramfile.gadget")
             gadget_cosmo = read_gadget.read_gadget_paramfile(gadget_fname)
             zs = read_gadget.snapshot_redshifts(gadget_cosmo)
 
             # setup cosmology from GenIC file
-            genic_fname = pair_dir + "/sim_plus/paramfile.genic"
+            genic_fname = str(pair_dir /  "sim_plus/paramfile.genic")
             cosmo_params = read_genic.camb_from_genic(genic_fname)
 
             # setup CAMB object
@@ -425,35 +426,15 @@ class GadgetArchive(BaseArchive):
                 p1d_label = self.p1d_label
             else:
                 p1d_label = "p1d_setau"
+            json_file = f'{p1d_label}_{ind_z}_{_sk_label_data}.json'
             data_json.append(
-                self.fulldir
-                + "/"
-                + sim_name
-                + "/"
-                + tag_phase
-                + "/"
-                + p1d_label
-                + "_"
-                + str(ind_z)
-                + "_"
-                + _sk_label_data
-                + ".json"
+                self.fulldir / sim_name / tag_phase / json_file
             )
 
         # path to parameters
+        json_file = f'{self.p1d_label_params}_{ind_z}_{_sk_label_params}.json'
         param_json = (
-            self.fulldir_param
-            + "/"
-            + sim_name_param
-            + "/"
-            + tag_phase
-            + "/"
-            + self.p1d_label_params
-            + "_"
-            + str(ind_z)
-            + "_"
-            + _sk_label_params
-            + ".json"
+            self.fulldir_param / sim_name_param / tag_phase / json_file
         )
 
         return data_json, param_json
@@ -526,7 +507,7 @@ class GadgetArchive(BaseArchive):
         keys_in = list(self.key_conv.keys())
 
         ## read file containing information about simulation suite
-        cube_json = self.fulldir + "/latin_hypercube.json"
+        cube_json = self.fulldir / "latin_hypercube.json"
         try:
             with open(cube_json) as json_file:
                 self.cube_data = json.load(json_file)
